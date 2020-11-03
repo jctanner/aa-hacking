@@ -505,7 +505,8 @@ class CloudBuilder:
         ds['services'].update(self.get_landing_services())
 
         # macs can't do static IPs
-        if platform.system().lower() == 'darwin':
+        #if platform.system().lower() == 'darwin':
+        if True:
             ds['services']['kcadmin'].pop('networks', None)
             ds['services']['sso.local.redhat.com'].pop('networks', None)
             ds['services']['sso.local.redhat.com'].pop('depends_on', None)
@@ -686,7 +687,8 @@ class CloudBuilder:
         if self.args.static:
             svc['depends_on'].remove('aafrontend')
 
-        if platform.system().lower() == 'darwin':
+        #if platform.system().lower() == 'darwin':
+        if True:
             svc.pop('network_mode', None)
             svc.pop('extra_hosts', None)
 
