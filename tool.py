@@ -416,17 +416,12 @@ class CloudBuilder:
                     'image': 'quay.io/keycloak/keycloak:11.0.0',
                     'environment': {
                         'DB_VENDOR': 'h2',
-                        #'DB_ADDR': 'kcpostgres',
-                        #'DB_DATABASE': 'keycloak',
-                        #'DB_USER': 'keycloak',
-                        #'DB_PASSWORD': 'keycloak',
                         'PROXY_ADDRESS_FORWARDING': "true",
                         'KEYCLOAK_USER': 'admin',
                         'KEYCLOAK_PASSWORD': 'password',
                     },
                     #'ports': ['8443:8443'],
                     'expose': [8443],
-                    'depends_on': ['kcpostgres'],
                     'networks': {
                         'ssonet': {
                             'ipv4_address': '172.23.0.3'
@@ -513,42 +508,7 @@ class CloudBuilder:
         if platform.system().lower() == 'darwin':
             ds['services']['kcadmin'].pop('networks', None)
             ds['services']['sso.local.redhat.com'].pop('networks', None)
-
-            #ds['services'].pop('kcpostgres', None)
-            #ds['services']['sso.local.redhat.com']['links'] = ['kcpostgres']
-            #ds['services']['kcpostgres']['ports'] = ["5432:5432"]
             ds['services']['sso.local.redhat.com'].pop('depends_on', None)
-            '''
-            ds['services']['sso.local.redhat.com']['environment'] = {
-                'DB_VENDOR': 'h2',
-                'PROXY_ADDRESS_FORWARDING': "true",
-                'KEYCLOAK_USER': 'admin',
-                'KEYCLOAK_PASSWORD': 'password',
-            }
-            '''
-
-            '''
-            with open(os.path.expanduser("~/.ssh/id_rsa.pub"), 'r') as f:
-                pubkey = f.read()
-            #import epdb; epdb.st()
-            ds['services']['proxysshd'] = {
-                'container_name': 'proxysshd',
-                #'image': 'proxysshd',
-                'image': 'kubernetesio/sshd-jumpserver',
-                #'build': {
-                #    'context': f"{os.path.join(self.checkouts_root, 'proxysshd')}",
-                #},
-                'expose': [22],
-                'ports': ['2222:22'],
-                'environment': {
-                    'SSH_ENABLE_ROOT': "true",
-                    'SSH_ENABLE_PASSWORD_AUTH': "true",
-                    'GATEWAY_PORTS': "true",
-                    'TCP_FORWARDING': "true",
-                    'PUBLIC_KEY': pubkey
-                }
-            }
-            '''
 
             squid_logs = os.path.join(self.checkouts_root, 'squid', 'logs')
             squid_conf = os.path.join(self.checkouts_root, 'squid', 'conf')
@@ -568,8 +528,6 @@ class CloudBuilder:
             pf['container_name'] = 'prod.foo.redhat.com'
             ds['services'].pop('insights_proxy', None)
             ds['services']['prod.foo.redhat.com'] = pf
-            #import epdb; epdb.st()
-
 
         # if static, chrome/landing/frontend should be compiled and put into wwwroot
         if self.args.static:
@@ -577,16 +535,6 @@ class CloudBuilder:
             ds['services'].pop('chrome_beta', None)
             ds['services'].pop('landing', None)
             ds['services'].pop('aafrontend', None)
-
-            ''' HANDLED ELSEWHERE
-            if os.path.exists(os.path.join(self.checkouts_root, 'www', 'apps', 'chrome')):
-                shutil.rmtree(os.path.join(self.checkouts_root, 'www', 'apps', 'chrome'))
-
-            shutil.copytree(
-                os.path.join(self.checkouts_root, 'insights-chrome', 'apps', 'chrome'),
-                os.path.join(self.checkouts_root, 'www', 'apps', 'chrome')
-            )
-            '''
 
         # build the backend?
         if self.args.backend_mock:
