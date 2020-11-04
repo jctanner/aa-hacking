@@ -89,7 +89,6 @@ services:
         command: /bin/bash -c "cd /app && pip install -r requirements.txt && python api.py"
     integration:
         container_name: integration
-        ipc: host
         image: aa_integration:latest
         build:
             context: ./srv/integration_tests
@@ -97,11 +96,12 @@ services:
         volumes:
             - ./srv/integration_tests:/app:rw
         user: node
-        cap_add:
-            - SYS_ADMIN
         entrypoint: ''
         depends_on:
             - sso.local.redhat.com
             - kcadmin
             - aabackend
         command: /bin/bash -c "cd /app && npm install && ./wait_for_stack.sh && timeout -s SIGKILL 1000s cypress run --headless --browser chrome --spec cypress/integration/automation-analytics.js"
+        ipc: host
+        cap_add:
+            - SYS_ADMIN
