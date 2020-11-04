@@ -45,9 +45,13 @@ stack_ci_cypress: clean
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
 stack_ci_cypress_debug: clean
-	cat /etc/issue
-	free -m
-	cat /proc/cpuinfo
+	pwd
+	if [[ -f /etc/issue ]]; then cat /etc/issue; fi;
+	uname -a
+	if [[ "$(shell uname)" == "Darwin" ]]; then echo "$(shell top -l 1 -s 0 | grep PhysMem)"; else free -m; fi;
+	if [[ "$(shell uname)" == "Darwin" ]]; then echo "$(shell sysctl -n machdep.cpu.brand_string)"; else cat /proc/cpuinfo; fi;
+	docker --version
+	which python3
 	python3 tool.py --backend_mock --static=all --integration --cypress_debug
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
