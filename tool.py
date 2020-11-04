@@ -515,7 +515,9 @@ class CloudBuilder:
         #import epdb; epdb.st()
 
         # macs can't do static IPs
-        #if platform.system().lower() == 'darwin':
+        if platform.system().lower() == 'darwin':
+            ds.pop('networks', None)
+
         if True:
             ds['services']['kcadmin'].pop('networks', None)
             ds['services']['sso.local.redhat.com'].pop('networks', None)
@@ -551,12 +553,6 @@ class CloudBuilder:
             if 'all' in self.args.static or 'tower-analytics-frontend' in self.args.static:
                 ds['services'].pop('aafrontend', None)
 
-            '''
-                    'volumes': [
-                        f"./{os.path.join(self.checkouts_root, 'www')}:/usr/share/nginx/html",
-                        f"./{os.path.join(self.checkouts_root, 'nginx.conf.d')}:/etc/nginx/conf.d"
-                    ],
-            '''
             for fc in self.frontend_services:
                 if 'all' in self.args.static or fc.www_app_name in self.args.static:
                     for dp in fc.www_deploy_paths:
@@ -746,7 +742,7 @@ class CloudBuilder:
         stemp = SPANDX_TEMPLATE
 
         #if not self.args.static:
-        if True:
+        if 'all' not in self.args.static and 'tower-analytics-frontend' not in self.args.static:
             if self.args.frontend_path:
                 stemp = stemp.replace("FRONTEND", 'https://aafrontend:8002')
             elif self.args.frontend_hash:
@@ -768,12 +764,6 @@ class CloudBuilder:
             # assume building the real deal? ...
             stemp = stemp.replace("BACKEND", 'http://fastapi:8080')
 
-        # landing is being hosted by the www service ...
-        if not self.args.node_landing and not self.args.static:
-            stlines = stemp.split('\n')
-            stlines = [x for x in stlines if '/apps/landing' not in x]
-            stemp = '\n'.join(stlines)
-
         if self.args.static:
             stlines = stemp.split('\n')
             for idx,x in enumerate(stlines):
@@ -791,65 +781,6 @@ class CloudBuilder:
 
         with open(os.path.join(self.webroot, 'spandx.config.js'), 'w') as f:
             f.write(stemp)
-
-    """
-    def make_aa_frontend(self):
-        git_url = 'https://github.com/RedhatInsights/tower-analytics-frontend'
-        srcpath = os.path.join(self.checkouts_root, 'tower-analytics-frontend')
-        if not os.path.exists(srcpath):
-            cmd = f'git clone {git_url} {srcpath}'
-            res = subprocess.run(cmd, shell=True)
-            if res.returncode != 0:
-                raise Exception(f'cloning {git_url} failed')
-
-        # pre-install packages ...
-        if not self.args.skip_frontend_install:
-            node_modules = os.path.join(srcpath, 'node_modules')
-            if not os.path.exists(node_modules):
-                '''
-                cmd = [self.get_npm_path(), 'install']
-                print(cmd)
-                res = subprocess.run(cmd, cwd=srcpath)
-                if res.returncode != 0:
-                    raise Exception(f'npm install failed')
-                '''
-                NpmInstaller(self).run_install(srcpath)
-
-        if not self.args.static:
-            # fixup the dockerfile to add the github actions runner user
-            dfile = os.path.join(srcpath, 'Dockerfile')
-            #with open(dfile, 'r') as f:
-            #    ddata = f.read()
-            with open(dfile, 'w') as f:
-                f.write(NODE_RUNNER_DOCKERFILE)
-        else:
-            # static build that will land in the www root ...
-            if os.path.exists(os.path.join(srcpath, 'dist')):
-                shutil.rmtree(os.path.join(srcpath, 'dist'))
-
-            cmd = f'{self.get_npm_path()} run build'
-            print(cmd)
-            res = subprocess.run(cmd, cwd=srcpath, shell=True)
-            if res.returncode != 0:
-                raise Exception(f'npm build failed')
-
-            www = os.path.join(self.checkouts_root, 'www')
-            if os.path.exists(os.path.join(www, 'apps', 'automation-analytics')):
-                shutil.rmtree(os.path.join(www, 'apps', 'automation-analytics'))
-            shutil.copytree(
-                os.path.join(srcpath, 'dist'),
-                os.path.join(www, 'apps', 'automation-analytics')
-            )
-            if os.path.exists(os.path.join(www, 'ansible')):
-                shutil.rmtree(os.path.join(www, 'ansible'))
-            os.makedirs(os.path.join(www, 'ansible'))
-            cmd = f"ln -s ../apps/automation-analytics automation-analytics"
-            res = subprocess.run(cmd, cwd=os.path.join(www, 'ansible'), shell=True)
-            if res.returncode != 0:
-                raise Exception(f'symlinking failed')
-
-            #import epdb; epdb.st()
-    """
 
     def make_aa_backend(self):
 
@@ -908,14 +839,6 @@ class CloudBuilder:
         if not os.path.exists(apps_path):
             os.makedirs(apps_path)
 
-        '''
-        # apps/chrome should point at the chrome build path
-        if not os.path.exists(os.path.join(apps_path, 'chrome')):
-            cmd = f'ln -s ../../{chrome_src} chrome'
-            print(cmd)
-            subprocess.run(cmd, cwd=apps_path, shell=True)
-        '''
-
         # get index.html and make it point at the right chrome css file ...
         if not os.path.exists(os.path.join(self.webroot, 'index.html')):
             cmd = 'curl -o index.html https://cloud.redhat.com'
@@ -933,6 +856,7 @@ class CloudBuilder:
         if not os.path.exists(dst):
             os.link(ssof, dst)
 
+    """
     def make_landing(self):
         # clone it
         repo = 'https://github.com/RedHatInsights/landing-page-frontend'
@@ -997,7 +921,9 @@ class CloudBuilder:
             if os.path.exists(apppath):
                 shutil.rmtree(apppath)
             shutil.copytree(os.path.join(srcpath, 'dist'), apppath)
+    """
 
+    """
     def make_chrome(self, build=False, reset=True, set_jwt=True, fix=True):
 
         # clone it
@@ -1120,6 +1046,7 @@ class CloudBuilder:
         res = subprocess.run(cmd, cwd=os.path.join(srcpath, 'build', 'js'), shell=True)
         if res.returncode != 0:
             raise Exception('chrome.js symlinking failed')
+    """
 
     def make_rbac(self):
         srcpath = os.path.join(self.checkouts_root, 'rbac')

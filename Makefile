@@ -23,32 +23,32 @@ clean_node_modules:
 	rm -rf srv/*/node_modules
 
 stack: clean
-	python3 tool.py --static='chrome' --static='landing'
+	python3 tool.py --static=chrome --static=landing
 	 $(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
 
 stack_backend_mock: clean
-	python3 tool.py --backend_mock --skip_frontend_install
+	python3 tool.py --backend_mock --static=chrome --static=landing
 	cat genstack.yml
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
 
 stack_mock_static: clean
-	python3 tool.py --backend_mock --static='all'
+	python3 tool.py --backend_mock --static=all
 	cat genstack.yml
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
 
 stack_ci_puppeteer: clean
-	python3 tool.py --backend_mock --static='all' --integration --puppeteer
+	python3 tool.py --backend_mock --static=all --integration --puppeteer
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
 stack_ci_cypress: clean
-	python3 tool.py --backend_mock --static='all' --integration --cypress
+	python3 tool.py --backend_mock --static=all --integration --cypress
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
 stack_ci_cypress_debug: clean
 	cat /etc/issue
 	free -m
 	cat /proc/cpuinfo
-	python3 tool.py --backend_mock --static --integration --cypress_debug
+	python3 tool.py --backend_mock --static=all --integration --cypress_debug
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
 stack_allow_restart: clean
