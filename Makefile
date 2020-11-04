@@ -23,7 +23,7 @@ clean_node_modules:
 	rm -rf srv/*/node_modules
 
 stack: clean
-	python3 tool.py
+	python3 tool.py --static='chrome' --static='landing'
 	 $(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
 
 stack_backend_mock: clean
@@ -31,31 +31,17 @@ stack_backend_mock: clean
 	cat genstack.yml
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
 
-# compiles but does not spin up the stack
-build_backend_mock: clean
-	python3 tool.py --backend_mock --skip_frontend_install
-	cat genstack.yml
-	#$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
-
 stack_mock_static: clean
-	python3 tool.py --backend_mock --static
+	python3 tool.py --backend_mock --static='all'
 	cat genstack.yml
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
 
-stack_ci: clean
-	python3 tool.py --backend_mock --integration --static
-	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
-
-stack_ci_devservers: clean
-	python3 tool.py --backend_mock --skip_frontend_install
-	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
-
 stack_ci_puppeteer: clean
-	python3 tool.py --backend_mock --static --integration --puppeteer
+	python3 tool.py --backend_mock --static='all' --integration --puppeteer
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
 stack_ci_cypress: clean
-	python3 tool.py --backend_mock --static --integration --cypress
+	python3 tool.py --backend_mock --static='all' --integration --cypress
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
 stack_ci_cypress_debug: clean
@@ -65,16 +51,8 @@ stack_ci_cypress_debug: clean
 	python3 tool.py --backend_mock --static --integration --cypress_debug
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS) --exit-code-from integration
 
-stack_ci_test: clean
-	python3 tool.py --backend_mock --skip_frontend_install --integration
-	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
-
-stack_no_reset_no_build: clean
-	python3 tool.py --skip_chrome_reset --skip_chrome_build 
-	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_OPTS)
-
 stack_allow_restart: clean
-	python3 tool.py
+	python3 tool.py --static=chrome --static=landing
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
 
 ########################################
