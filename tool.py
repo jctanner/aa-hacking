@@ -600,11 +600,8 @@ class CloudBuilder:
         if platform.system().lower() == 'darwin':
             ds.pop('networks', None)
 
-        if True:
-            ds['services']['kcadmin'].pop('networks', None)
-            ds['services']['sso.local.redhat.com'].pop('networks', None)
-            ds['services']['sso.local.redhat.com'].pop('depends_on', None)
-
+        # Add squid for the mac users who can't directly connect to containers
+        if not self.args.integration:
             squid_logs = os.path.join(self.checkouts_root, 'squid', 'logs')
             squid_conf = os.path.join(self.checkouts_root, 'squid', 'conf')
             if not os.path.exists(squid_logs):
@@ -618,6 +615,11 @@ class CloudBuilder:
                     f"./{squid_logs}:/var/log/squid",
                 ]
             }
+
+        if True:
+            ds['services']['kcadmin'].pop('networks', None)
+            ds['services']['sso.local.redhat.com'].pop('networks', None)
+            ds['services']['sso.local.redhat.com'].pop('depends_on', None)
 
             pf = copy.deepcopy(ds['services']['insights_proxy'])
             pf['container_name'] = 'prod.foo.redhat.com'
