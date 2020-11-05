@@ -3,6 +3,7 @@
 import argparse
 import copy
 import getpass
+import json
 import os
 import shutil
 import subprocess
@@ -118,6 +119,36 @@ CMD python3 api.py
 FLASKREQUIREMENTS = '''flask
 cryptography
 '''
+
+
+class HostVerifier:
+
+    def __init__(self, args):
+        self.args = args
+        self.run()
+
+    def run(self):
+        self.verify_docker()
+
+    def verify_docker(self):
+        cmd = 'which docker'
+        res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        if res.returncode != 0:
+            raise Exception("docker was not found in your PATH")
+
+        if platform.system().lower() == 'darwin':
+            settings_path = '~/Library/Group Containers/group.com.docker/settings.json'
+            settings_path = os.path.expanduser(settings_path)
+            with open(settings_path, 'r') as f:
+                settings = json.loads(f.read())
+
+            shares = settings['filesharingDirectories']
+            if shares != ['/Users']:
+                msg = 'docker is configured to share more than /Users and this causes performance issues'
+                raise Exception(msg)
+
+            if settings['memoryMiB'] < 4000:
+                raise Exception("the docker service needs at least 4GB of RAM")
 
 
 class GenericFrontendComponent:
@@ -881,6 +912,7 @@ def main():
     parser.add_argument(
         '--static',
         action='append',
+        default=[],
         choices=['all', 'chrome', 'landing', 'automation-analytics'],
         help="do not use webpack dev server where possible"
     )
@@ -890,6 +922,8 @@ def main():
     parser.add_argument('--cypress', action='store_true')
     parser.add_argument('--cypress_debug', action='store_true')
     args = parser.parse_args()
+
+    HostVerifier(args)
 
     logger.info("starting cloudbuilder")
     cbuilder = CloudBuilder(args=args)
