@@ -158,11 +158,21 @@ class HostVerifier:
         if res.returncode != 0:
             raise Exception("docker was not found in your PATH")
 
+        dockerbin = res.stdout.decode('utf-8').strip()
+        res = subprocess.run(f'{dockerbin} --version', shell=True, stdout=subprocess.PIPE)
+        version = res.stdout.decode('utf-8').split()[2]
+        vmajor = int(version.split('.')[0])
+        if vmajor < 19:
+            raise Exception('docker version needs to be >= 19')
+
         if platform.system().lower() == 'darwin':
             settings_path = '~/Library/Group Containers/group.com.docker/settings.json'
             settings_path = os.path.expanduser(settings_path)
             with open(settings_path, 'r') as f:
                 settings = json.loads(f.read())
+
+            if 'filesharingDirectories' not in settings:
+                raise Exception('dockerd is not configured to share any folders')
 
             shares = settings['filesharingDirectories']
             if shares != ['/Users']:
