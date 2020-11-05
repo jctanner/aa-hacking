@@ -3,6 +3,7 @@
 import argparse
 import copy
 import getpass
+import glob
 import json
 import os
 import shutil
@@ -202,6 +203,20 @@ class HostVerifier:
             raise Exception(f'found node version {version} which is not >= 10')
 
 
+''' When npm install was run from the mac but is being used by webpack devserver in linux ...
+| Child mini-css-extract-plugin node_modules/css-loader/dist/cjs.js!node_modules/sass-loader/dist/cjs.js!node_modules/@patternfly/react-core/node_modules/@patternfly/react-styles/css/components/Alert/alert.css:                                                                                                                                                
+|     Entrypoint mini-css-extract-plugin = *                                                                                                                                                                                                                                                                                                                      
+|     [./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./node_modules/@patternfly/react-core/node_modules/@patternfly/react-styles/css/components/Alert/alert.css] 1.18 KiB {mini-css-extract-plugin} [built] [failed] [1 error]                                                                                                     
+|                                                                                                                                                                  
+|     ERROR in ./node_modules/@patternfly/react-core/node_modules/@patternfly/react-styles/css/components/Alert/alert.css (./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./node_modules/@patternfly/react-core/node_modules/@patternfly/react-styles/css/components/Alert/alert.css)                                               
+|     Module build failed (from ./node_modules/sass-loader/dist/cjs.js):                                                                                           
+|     Error: Missing binding /app/node_modules/node-sass/vendor/linux-x64-64/binding.node                                                                          
+|     Node Sass could not find a binding for your current environment: Linux 64-bit with Node.js 10.x                                                              
+|                                                                                                                                                                                                                                                                                                                                                                 
+|     Found bindings for the following environments:                                                                                                                                                                                                                                                                                                              
+|       - OS X 64-bit with Node.js 10.x   
+'''
+
 class GenericFrontendComponent:
 
     _installed = False
@@ -257,6 +272,18 @@ class GenericFrontendComponent:
 
         if os.path.exists(os.path.join(self.srcpath, 'node_modules')):
             install = False
+
+        # make sure node has the right arch bindings for the location this app
+        # is going to run from if it's going to be run with webpack devserver ...
+        if 'all' not in self.cb.args.static and self.www_app_name not in self.cb.args.static:
+            nmpath = os.path.join(self.srcpath, 'node_modules')
+            vendor_path = os.path.join(nmpath, 'node-sass', 'vendor')
+            arches = glob.glob(f'{vendor_path}/*')
+            arches = [os.path.basename(x) for x in arches]
+
+            if arches == ['darwin-x64-64']:
+                logger.warning(f'deleting {nmpath} because it has the wrong arch for linux')
+                shutil.rmtree(nmpath)
 
         if not install:
             return
@@ -318,6 +345,7 @@ class GenericFrontendComponent:
             logger.info(f'deploy {src} -> {dst}')
             shutil.copytree(src, dst)
         '''
+        pass
 
     def postdeploy(self):
         pass
