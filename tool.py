@@ -197,8 +197,9 @@ class HostVerifier:
         res = subprocess.run(f'{node} --version', shell=True, stdout=subprocess.PIPE)
         version = res.stdout.decode('utf-8').strip()
         vparts = version.split('.')
-        if vparts[0] != 'v10':
-            raise Exception(f'found node version {version} which is not v10')
+        vmajor = int(vparts[0].replace('v', ''))
+        if vmajor < 10:
+            raise Exception(f'found node version {version} which is not >= 10')
 
 
 class GenericFrontendComponent:
