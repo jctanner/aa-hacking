@@ -33,6 +33,12 @@ the backend returns large amounts of data? You can find out.
     pip install --upgrade docker-compose
     make stack_backend_mock
 
+    # open a second terminal
+    cd srv/integration_tests
+    npm install
+    npm install cypress
+    npm run tests:integration:cypress-windowed
+
 ## Components
 
 ### tool.py
