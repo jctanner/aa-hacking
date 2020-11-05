@@ -235,13 +235,6 @@ class GenericFrontendComponent:
         return self._built
 
 
-    def get_npm_path(self):
-        # /home/vagrant/.nvm/versions/node/v10.15.3/bin/npm
-        #npath = os.path.expanduser('~/.nvm/versions/node/v10.15.3/bin/npm')
-        res = subprocess.run('which npm', shell=True, stdout=subprocess.PIPE)
-        npath = res.stdout.decode('utf-8').strip()
-        return npath
-
     def clone(self):
         if not os.path.exists(self.srcpath):
             logger.info(f"clone {self.repo}")
@@ -268,7 +261,7 @@ class GenericFrontendComponent:
         if not install:
             return
 
-        cmd = ' '.join([self.get_npm_path(), 'install'])
+        cmd = ' '.join([get_npm_path(), 'install'])
         logger.info(f'installing npm deps for {self.name}') 
         logger.info(cmd)
         res = subprocess.run(cmd, shell=True, cwd=self.srcpath)
@@ -298,7 +291,7 @@ class GenericFrontendComponent:
         if not build:
             return
 
-        cmd = ' '.join([self.get_npm_path(), 'run', 'build'])
+        cmd = ' '.join([get_npm_path(), 'run', 'build'])
         logger.info(f'building static version of {self.name}') 
         logger.info(cmd)
         res = subprocess.run(cmd, shell=True, cwd=self.srcpath)
@@ -786,13 +779,6 @@ class CloudBuilder:
             svc['depends_on'].remove('aafrontend')
 
         return svc
-
-    def get_npm_path(self):
-        # /home/vagrant/.nvm/versions/node/v10.15.3/bin/npm
-        #npath = os.path.expanduser('~/.nvm/versions/node/v10.15.3/bin/npm')
-        res = subprocess.run('which npm', shell=True, stdout=subprocess.PIPE)
-        npath = res.stdout.decode('utf-8').strip()
-        return npath
 
     def make_spandx(self):
 
