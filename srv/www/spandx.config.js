@@ -3,9 +3,9 @@ const localhost = (process.env.PLATFORM === 'linux') ? 'localhost' : 'host.docke
 
 module.exports = {
     routes: {
-        '/apps/automation-analytics': { host: `https://aafrontend:8002` },
-        '/ansible/automation-analytics': { host: `https://aafrontend:8002` },
-        '/beta/ansible/automation-analytics': { host: `https://aafrontend:8002` },
+        '/apps/automation-analytics': { host: `http://webroot` },
+        '/ansible/automation-analytics': { host: `http://webroot` },
+        '/beta/ansible/automation-analytics': { host: `http://webroot` },
         '/api/tower-analytics': { host: `https://aabackend:443` },
         '/apps/chrome': { host: `http://webroot` },
         '/apps/landing': { host: `http://webroot` },

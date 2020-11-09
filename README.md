@@ -36,8 +36,11 @@ the backend returns large amounts of data? You can find out.
     # open a second terminal
     cd srv/integration_tests
     npm install
-    npm install cypress
-    npm run tests:integration:cypress-windowed
+    #npm install cypress
+    #npm run tests:integration:cypress-windowed
+    export HTTP_PROXY=http://localhost:3128
+    export HTTPS_PROXY=http://localhost:3128
+    ./node_modules/.bin/cypress run --no-exit --browser firefox --spec cypress/integration/automation-analytics.js
 
 ## Components
 
