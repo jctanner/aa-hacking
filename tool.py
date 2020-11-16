@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import platform
 import yaml
@@ -539,7 +540,30 @@ class CloudBuilder:
         res = subprocess.run(cmd, cwd=install_dir, shell=True)
         if res.returncode != 0:
             raise Exception(f'awx install failed')
-        #import epdb; epdb.st()
+
+
+        # PATCH THE ANALYTICS GATHERING CODE TO SKIP LICENSE CHECK ...
+        core_file = '/var/lib/awx/venv/awx/lib/python3.6/site-packages/awx/main/analytics/core.py'
+        tdir = tempfile.mkdtemp()
+        src = os.path.join(tdir, 'core.py')
+        res = subprocess.run(f'docker cp awx_task:{core_file} {src}', shell=True)
+        if res.returncode != 0:
+            raise Exception(f'awx install failed')
+
+        with open(src, 'r') as f:
+            code = f.read()
+
+        code = code.replace('\r\n', '\n')
+        code = code.replace('def _valid_license():', 'def _valid_license():\n    return True\n')
+
+        src = os.path.join(tdir, 'core.py')
+        with open(src, 'w') as f:
+            f.write(code)
+        cmd = f'docker cp {src} awx_task:{core_file}'
+        res = subprocess.run(cmd, cwd=install_dir, shell=True)
+        if res.returncode != 0:
+            raise Exception(f'copy failed')
+
 
     def get_node_container_user(self):
         '''github actions create bind moundts as root and the node user can't write'''
