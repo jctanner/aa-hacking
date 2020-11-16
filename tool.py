@@ -465,6 +465,10 @@ class CloudBuilder:
         if not os.path.exists(self.webroot):
             os.makedirs(self.webroot)
 
+        if self.args.awx:
+            self.build_awx()
+            #sys.exit(0)
+
         self.frontend_services = []
         for svc_name in ['insights-chrome', 'landing-page-frontend', 'tower-analytics-frontend']:
             src_path = os.path.join(self.checkouts_root, svc_name)
@@ -494,6 +498,49 @@ class CloudBuilder:
 
         self.create_compose_file()
 
+    def build_awx(self):
+        git_url = 'https://github.com/ansible/awx'
+        srcdir = os.path.join(self.checkouts_root, 'awx')
+        if not os.path.exists(srcdir):
+            cmd = f'git clone {git_url} {srcdir}'
+            res = subprocess.run(cmd, shell=True)
+            if res.returncode != 0:
+                raise Exception(f'cloning {git_url} failed')
+
+        inv = os.path.join(srcdir, 'installer', 'inventory')
+        with open(inv, 'r') as f:
+            inventory = f.readlines()
+
+        #projects_dir = os.path.join(os.path.abspath(srcdir), '.awx', 'projects')
+        var_dir = os.path.join(self.checkouts_root, 'awx.var')
+        var_dir = os.path.abspath(var_dir)
+        projects_dir = os.path.join(var_dir, 'projects')
+        if not os.path.exists(projects_dir):
+            os.makedirs(projects_dir)
+
+        for idx,x in enumerate(inventory):
+            if 'awx_official' in x:
+                inventory[idx] = 'awx_official=True\n'
+            elif 'postgres_data_dir' in x:
+                inventory[idx] = f'postgres_data_dir="{var_dir}/pgdocker"\n'
+            elif 'docker_compose_dir' in x:
+                inventory[idx] = f'docker_compose_dir="{var_dir}/awxcompose"\n'
+            elif 'create_preload_data' in x:
+                inventory[idx] = 'create_preload_data=False\n'
+            elif 'project_data_dir' in x:
+                inventory[idx] = f'project_data_dir="{projects_dir}"\n'
+
+        with open(inv, 'w') as f:
+            for x in inventory:
+                f.write(x)
+
+        install_dir = os.path.join(srcdir, 'installer')
+        cmd = 'ansible-playbook -i inventory -v install.yml'
+        res = subprocess.run(cmd, cwd=install_dir, shell=True)
+        if res.returncode != 0:
+            raise Exception(f'awx install failed')
+        #import epdb; epdb.st()
+
     def get_node_container_user(self):
         '''github actions create bind moundts as root and the node user can't write'''
 
@@ -509,13 +556,6 @@ class CloudBuilder:
     def create_compose_file(self):
         ds = {
             'version': '3',
-            'networks': {
-                'ssonet': {
-                    'ipam': {
-                        'config': [{'subnet': '172.23.0.0/24'}]
-                    }
-                }
-            },
             'volumes': {
                 'local_postgres_data': {},
                 'local_postgres_data_backups': {},
@@ -693,6 +733,21 @@ class CloudBuilder:
 
         if self.args.integration:
             ds['services']['integration'] = self.get_integration_compose()
+
+
+        # add the cloudnet network to all of the services ...
+        #for k,v in ds['services'].items():
+        #    ds['services'][k]['networks'] = ['awxcompose_default']
+        #import epdb; epdb.st()
+
+        if self.args.awx:
+            ds['networks'] = {
+                'default': {
+                    'external': {
+                        'name': 'awxcompose_default',
+                    }
+                }
+            }
 
         yaml = YAML(typ='rt', pure=True)
         yaml.preserve_quotes = False
@@ -959,23 +1014,13 @@ class CloudBuilder:
 def main():
 
     parser = argparse.ArgumentParser()
-    #parser.add_argument('--frontend', choices=['local', 'container'], default='local')
     parser.add_argument('--frontend_address', help="use local or remote address for frontend")
     parser.add_argument('--frontend_hash', help="what aa frontend hash to use")
     parser.add_argument('--frontend_path', help="path to an aa frontend checkout")
-    #parser.add_argument('--backend', choices=['local', 'container', 'mock_container'], default='local')
     parser.add_argument('--backend_address', help="use local or remote address for backend")
     parser.add_argument('--backend_hash', help="what aa backend hash to use")
     parser.add_argument('--backend_path', help="path to an aa backend checkout")
     parser.add_argument('--backend_mock', action='store_true', help="use the mock backend")
-    #parser.add_argument('--skip_chrome', action='store_true')
-    #parser.add_argument('--skip_landing', action='store_true')
-    #parser.add_argument('--skip_chrome_reset', action='store_true')
-    #parser.add_argument('--skip_chrome_build', action='store_true')
-    #parser.add_argument('--skip_frontend_install', action='store_true')
-    #parser.add_argument('--node_landing', action='store_true')
-
-    #parser.add_argument('--static', action='store_true', help="do not use webpack dev server where possible")
     parser.add_argument(
         '--static',
         action='append',
@@ -983,11 +1028,12 @@ def main():
         choices=['all', 'chrome', 'landing', 'automation-analytics'],
         help="do not use webpack dev server where possible"
     )
-
     parser.add_argument('--integration', action='store_true')
     parser.add_argument('--puppeteer', action='store_true')
     parser.add_argument('--cypress', action='store_true')
     parser.add_argument('--cypress_debug', action='store_true')
+    parser.add_argument('--awx', action='store_true')
+
     args = parser.parse_args()
 
     HostVerifier(args)

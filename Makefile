@@ -13,6 +13,8 @@ clean:
 	rm -rf srv/integration_tests/cypress/videos/*
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml down || echo "docker-compose down failed"
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml rm -f || echo "docker-compose rm failed"
+	if [[ -f srv/awx.var/awxcompose ]]; then $(DOCKER_COMPOSE_BIN) -f srv/awx.var/awxcompose kill; fi;
+	if [[ -f srv/awx.var/awxcompose ]]; then $(DOCKER_COMPOSE_BIN) -f srv/awx.var/awxcompose rm; fi;
 	docker volume prune -f
 	docker volume ls | fgrep _local_ | awk '{print $2}' | xargs -I {} docker volume rm -f {}
 	if [[ -d srv/tower-analytics-backend ]]; then sudo rm -rf srv/tower-analytics-backend/local_*_data; fi;
@@ -32,6 +34,10 @@ stack: clean venv
 
 stack_allow_restart: clean venv
 	$(PYTHON_BIN) tool.py --static=chrome --static=landing
+	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
+
+stack_with_awx: clean venv
+	$(PYTHON_BIN) tool.py --static=chrome --static=landing --awx
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
 
 stack_backend_mock: clean venv
