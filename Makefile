@@ -4,6 +4,7 @@ PYTHON_BIN = venv/bin/python3
 DOCKER_COMPOSE_BIN = COMPOSE_HTTP_TIMEOUT=1000 venv/bin/docker-compose
 DOCKER_RESTART_OPTS = --no-color -V --force-recreate --always-recreate-deps --attach-dependencies
 DOCKER_OPTS = $(DOCKER_RESTART_OPTS) --abort-on-container-exit
+AWX_COMPOSE = srv/awx.var/awxcompose/docker-compose.yml
 
 venv:
 	scripts/create_venv.sh
@@ -13,8 +14,8 @@ clean:
 	rm -rf srv/integration_tests/cypress/videos/*
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml down || echo "docker-compose down failed"
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml rm -f || echo "docker-compose rm failed"
-	if [[ -f srv/awx.var/awxcompose ]]; then $(DOCKER_COMPOSE_BIN) -f srv/awx.var/awxcompose kill; fi;
-	if [[ -f srv/awx.var/awxcompose ]]; then $(DOCKER_COMPOSE_BIN) -f srv/awx.var/awxcompose rm; fi;
+	if [[ -f $(AWX_COMPOSE) ]]; then $(DOCKER_COMPOSE_BIN) -f $(AWX_COMPOSE) kill; fi;
+	if [[ -f $(AWX_COMPOSE) ]]; then $(DOCKER_COMPOSE_BIN) -f $(AWX_COMPOSE) rm -f; fi;
 	docker volume prune -f
 	docker volume ls | fgrep _local_ | awk '{print $2}' | xargs -I {} docker volume rm -f {}
 	if [[ -d srv/tower-analytics-backend ]]; then sudo rm -rf srv/tower-analytics-backend/local_*_data; fi;
