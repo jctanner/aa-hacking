@@ -134,6 +134,22 @@ def je_options():
     return jsonify(data)
 
 
+@app.route('/ingress/v1/upload', methods=['POST'])
+def upload_bundle():
+    print(request)
+    #print(request.data)
+    #print(request.files)
+    for fo in request.files.items():
+        print(fo)
+        print(type(fo))
+        print(fo[0])
+        print(fo[1])
+        print(dir(fo[1]))
+        dst = os.path.join('/tmp', fo[1].filename)
+        fo[1].save(dst)
+    return jsonify({})
+
+
 if __name__ == '__main__':
     #app.run(ssl_context='adhoc', host='0.0.0.0', port=443, debug=True)
     #server = Server(('0.0.0.0', 443), app.wsgi_app)
