@@ -15,12 +15,18 @@ def main():
     args = parser.parse_args()
 
     pids = []
-    for command in args.command:
-        pids.append(run_command(command))
-   
-    for x in pids:
-        pid.wait()
-    #import epdb; epdb.st()
+
+    try:
+        for command in args.command:
+            pids.append(run_command(command))
+       
+        for pid in pids:
+            pid.wait()
+
+    except KeyboardInterrupt:
+        print('# KILLING STACKS ...')
+        for pid in pids:
+            pid.kill()
 
 
 if __name__ == "__main__":

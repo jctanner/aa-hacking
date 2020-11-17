@@ -802,7 +802,7 @@ class CloudBuilder:
             ds['networks'] = {
                 'default': {
                     'external': {
-                        'name': 'awxcompose_default',
+                        'name': 'tools_default',
                     }
                 }
             }
