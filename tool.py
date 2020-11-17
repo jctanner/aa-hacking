@@ -508,62 +508,49 @@ class CloudBuilder:
             if res.returncode != 0:
                 raise Exception(f'cloning {git_url} failed')
 
-        inv = os.path.join(srcdir, 'installer', 'inventory')
-        with open(inv, 'r') as f:
-            inventory = f.readlines()
-
-        #projects_dir = os.path.join(os.path.abspath(srcdir), '.awx', 'projects')
-        var_dir = os.path.join(self.checkouts_root, 'awx.var')
-        var_dir = os.path.abspath(var_dir)
-        projects_dir = os.path.join(var_dir, 'projects')
-        if not os.path.exists(projects_dir):
-            os.makedirs(projects_dir)
-
-        for idx,x in enumerate(inventory):
-            if 'awx_official' in x:
-                inventory[idx] = 'awx_official=True\n'
-            elif 'postgres_data_dir' in x:
-                inventory[idx] = f'postgres_data_dir="{var_dir}/pgdocker"\n'
-            elif 'docker_compose_dir' in x:
-                inventory[idx] = f'docker_compose_dir="{var_dir}/awxcompose"\n'
-            elif 'create_preload_data' in x:
-                inventory[idx] = 'create_preload_data=False\n'
-            elif 'project_data_dir' in x:
-                inventory[idx] = f'project_data_dir="{projects_dir}"\n'
-
-        with open(inv, 'w') as f:
-            for x in inventory:
-                f.write(x)
-
-        install_dir = os.path.join(srcdir, 'installer')
-        cmd = 'ansible-playbook -i inventory -v install.yml'
-        res = subprocess.run(cmd, cwd=install_dir, shell=True)
-        if res.returncode != 0:
-            raise Exception(f'awx install failed')
-
+        # COPY THE SETTINGS FILE ...
+        shutil.copy(
+            os.path.join(srcdir, 'awx/settings/local_settings.py.docker_compose'),
+            os.path.join(srcdir, 'awx/settings/local_settings.py')
+        )
 
         # PATCH THE ANALYTICS GATHERING CODE TO SKIP LICENSE CHECK ...
-        core_file = '/var/lib/awx/venv/awx/lib/python3.6/site-packages/awx/main/analytics/core.py'
-        tdir = tempfile.mkdtemp()
-        src = os.path.join(tdir, 'core.py')
-        res = subprocess.run(f'docker cp awx_task:{core_file} {src}', shell=True)
-        if res.returncode != 0:
-            raise Exception(f'awx install failed')
-
-        with open(src, 'r') as f:
+        core_file = os.path.join(srcdir, 'awx/main/analytics/core.py')
+        with open(core_file, 'r') as f:
             code = f.read()
-
         code = code.replace('\r\n', '\n')
         code = code.replace('def _valid_license():', 'def _valid_license():\n    return True\n')
-
-        src = os.path.join(tdir, 'core.py')
-        with open(src, 'w') as f:
+        with open(core_file, 'w') as f:
             f.write(code)
-        cmd = f'docker cp {src} awx_task:{core_file}'
-        res = subprocess.run(cmd, cwd=install_dir, shell=True)
-        if res.returncode != 0:
-            raise Exception(f'copy failed')
 
+        # BUILD THE UI ...
+        makefile = os.path.join(srcdir, 'Makefile')
+        node_modules_dir = os.path.join(srcdir, 'awx', 'ui', 'node_modules')
+        static_dir = os.path.join(srcdir, 'awx', 'ui', 'static')
+        if not os.path.exists(node_modules_dir) or not os.path.exists(static_dir):
+
+            # $(NPM_BIN) --prefix awx/ui run build-devel -- $(MAKEFLAGS)
+            with open(makefile, 'r') as f:
+                makedata = f.read()
+            makedata = makedata.replace(
+                '$(NPM_BIN) --prefix awx/ui run build-devel -- $(MAKEFLAGS)',
+                '$(NPM_BIN) --prefix awx/ui run build-devel'
+            )
+            with open(makefile, 'w') as f:
+                f.write(makedata)
+
+            cmd = 'make clean-ui'
+            logger.info(cmd)
+            res = subprocess.run(cmd, cwd=srcdir, shell=True)
+            if res.returncode != 0:
+                raise Exception(f'ui clean failed')
+
+            cmd = 'make ui-devel'
+            logger.info(cmd)
+            #import epdb; epdb.st()
+            res = subprocess.run(cmd, cwd=srcdir, shell=True)
+            if res.returncode != 0:
+                raise Exception(f'ui build failed')
 
     def get_node_container_user(self):
         '''github actions create bind moundts as root and the node user can't write'''
