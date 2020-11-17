@@ -2,6 +2,7 @@
 
 import os
 import json
+import subprocess
 
 import flask
 from flask import Flask
@@ -136,17 +137,26 @@ def je_options():
 
 @app.route('/ingress/v1/upload', methods=['POST'])
 def upload_bundle():
-    print(request)
-    #print(request.data)
-    #print(request.files)
+    bdir = os.path.join('/var', 'tower', 'bundles')
+    ddir = os.path.join('/var', 'tower', 'data')
+    if not os.path.exists(bdir):
+        os.makedirs(bdir)
+    if not os.path.exists(ddir):
+        os.makedirs(ddir)
+
     for fo in request.files.items():
-        print(fo)
-        print(type(fo))
-        print(fo[0])
-        print(fo[1])
-        print(dir(fo[1]))
-        dst = os.path.join('/tmp', fo[1].filename)
+
+        # get the file ...
+        dst = os.path.join(bdir, fo[1].filename)
+        print(dst)
         fo[1].save(dst)
+
+        # extract the file ...
+        bn = fo[1].filename.replace('.tar.gz', '')
+        edst = os.path.join(ddir, bn)
+        os.makedirs(edst)
+        subprocess.run(f'tar xzvf {dst}', cwd=edst, shell=True)
+
     return jsonify({})
 
 
