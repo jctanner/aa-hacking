@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+import argparse
+import subprocess
+import sys
+
+def run_command(cmd):
+    p = subprocess.Popen(cmd, shell=True)
+    return p
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--command', action='append')
+    args = parser.parse_args()
+
+    pids = []
+    for command in args.command:
+        pids.append(run_command(command))
+   
+    for x in pids:
+        pid.wait()
+    #import epdb; epdb.st()
+
+
+if __name__ == "__main__":
+    main()

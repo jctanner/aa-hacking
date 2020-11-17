@@ -1,10 +1,12 @@
 SHELL := /bin/bash
 
 PYTHON_BIN = venv/bin/python3
-DOCKER_COMPOSE_BIN = COMPOSE_HTTP_TIMEOUT=1000 venv/bin/docker-compose
+DOCKER_COMPOSE_BIN = COMPOSE_HTTP_TIMEOUT=1000 $(shell pwd)/venv/bin/docker-compose
 DOCKER_RESTART_OPTS = --no-color -V --force-recreate --always-recreate-deps --attach-dependencies
 DOCKER_OPTS = $(DOCKER_RESTART_OPTS) --abort-on-container-exit
 AWX_COMPOSE = srv/awx.var/awxcompose/docker-compose.yml
+CURRENT_UID=$(shell id -u)
+OS="$(shell docker info | grep 'Operating System')"
 
 venv:
 	scripts/create_venv.sh
@@ -39,7 +41,13 @@ stack_allow_restart: clean venv
 
 stack_with_awx: clean venv
 	$(PYTHON_BIN) tool.py --static=chrome --static=landing --awx
-	$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
+	#cd srv/awx && $(DOCKER_COMPOSE_BIN) -f tools/docker-compose.yml up $(DOCKER_RESTART_OPTS) awx
+	#$(DOCKER_COMPOSE_BIN) -f srv/awx/tools/docker-compose.yml up $(DOCKER_RESTART_OPTS)
+	#$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)
+	#scripts/multi-compose -f srv/awx/tools/docker-compose.yml -f genstack.yml $(DOCKER_RESTART_OPTS)
+	scripts/multi-command \
+		--command="cd srv/awx && make docker-compose" \
+		--command="$(DOCKER_COMPOSE_BIN) -f genstack.yml up $(DOCKER_RESTART_OPTS)"
 
 stack_backend_mock: clean venv
 	$(PYTHON_BIN) tool.py --backend_mock --static=chrome --static=landing

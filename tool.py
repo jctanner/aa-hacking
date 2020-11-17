@@ -507,6 +507,12 @@ class CloudBuilder:
             res = subprocess.run(cmd, shell=True)
             if res.returncode != 0:
                 raise Exception(f'cloning {git_url} failed')
+        
+        # RESET ALL CHANGES
+        cmd = 'git reset --hard'
+        res = subprocess.run(cmd, cwd=srcdir, shell=True)
+        if res.returncode != 0:
+            raise Exception(f'git reset failed')
 
         # COPY THE SETTINGS FILE ...
         shutil.copy(
@@ -551,6 +557,47 @@ class CloudBuilder:
             res = subprocess.run(cmd, cwd=srcdir, shell=True)
             if res.returncode != 0:
                 raise Exception(f'ui build failed')
+
+        '''
+        composefn = os.path.join(srcdir, 'tools', 'docker-compose.yml')
+        with open(composefn, 'r') as f:
+            compose = f.read()
+
+        # GIT BRANCH
+        cmd = f'cd {srcdir} && git rev-parse --abbrev-ref HEAD'
+        res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        gbranch = res.stdout.decode('utf-8').strip()
+        compose = compose.replace('${TAG}', gbranch)
+
+        # CURRENT USER
+        cmd = 'id -u'
+        res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        uid = res.stdout.decode('utf-8').strip()
+        compose = compose.replace('${CURRENT_UID}', '"' + uid + '"')
+
+        # OS
+        cmd = 'docker info | grep "Operatiing System"'
+        res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        osname = res.stdout.decode('utf-8').strip()
+
+        # TAG
+        tag_base = 'gcr.io/ansible-tower-engineering'
+        compose = compose.replace('${DEV_DOCKER_TAG_BASE}', tag_base)
+
+        # VOLUMES 
+        abs_src = os.path.abspath(srcdir)
+        compose = compose.replace('../:/awx_devel', abs_src + '/:/awx_devel')
+        compose = compose.replace('../awx/', os.path.join(abs_src, 'awx') + '/')
+        compose = compose.replace('./docker-compose/', os.path.join(abs_src, 'docker-compose') + '/')
+        compose = compose.replace('./redis/', os.path.join(abs_src, 'redis') + '/')
+        #compose = compose.replace('"awx_db:', os.path.join(abs_src, '"awx_db'))
+        #import epdb; epdb.st()
+
+        with open(composefn, 'w') as f:
+            f.write(compose)
+        '''
+
+        #sys.exit(1)
 
     def get_node_container_user(self):
         '''github actions create bind moundts as root and the node user can't write'''
