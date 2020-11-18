@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import os
 import json
 import subprocess
@@ -147,12 +148,12 @@ def upload_bundle():
     for fo in request.files.items():
 
         # get the file ...
-        dst = os.path.join(bdir, fo[1].filename)
+        dst = os.path.join(bdir, datetime.datetime.now().isoformat() + "_" + fo[1].filename)
         print(dst)
         fo[1].save(dst)
 
         # extract the file ...
-        bn = fo[1].filename.replace('.tar.gz', '')
+        bn = os.path.basename(dst).replace('.tar.gz', '')
         edst = os.path.join(ddir, bn)
         os.makedirs(edst)
         subprocess.run(f'tar xzvf {dst}', cwd=edst, shell=True)

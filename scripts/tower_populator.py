@@ -205,7 +205,7 @@ class Tower:
                 raise Exception('inventory create failed')
 
     def make_hosts(self):
-        (rc, so, se) = vagrant_ssh(self.boxpath, "tower-cli host list")
+        (rc, so, se) = vagrant_ssh(self.boxpath, "tower-cli host list --all-pages")
         lines = so.split('\n')
         lines = [x.strip() for x in lines if x.strip() and '=' not in x and 'name' not in x]
 
@@ -218,12 +218,13 @@ class Tower:
             hosts[thisid] = {'name': thisname, 'inventory_id': invid}
 
         pprint(hosts)
+        hkeys = sorted(list(hosts.keys()))
 
-        if len(hosts) == 1:
+        if len(hosts) < 10000:
             inventories = self.get_inventories()
             ti = [x for x in inventories.items() if x[1] == 'test_inventory']
             ti = ti[0][0]
-            for x in range(0, 101):
+            for x in range(hkeys[-1], 10000):
                 thisname = f"host-{x}"
                 cmd = f"tower-cli host create --name={thisname} --inventory={ti}"
                 (rc, so, se) = vagrant_ssh(self.boxpath, cmd)
