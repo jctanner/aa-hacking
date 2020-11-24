@@ -36,9 +36,15 @@ class CRCBuilder:
         self.args = args
         self.verify_files()
         self.extract_files()
-        self.start_crc()
-        self.oc_env
-        self.crc_credentials
+
+
+        if self.args.operation == 'clean':
+            self.clean()
+
+        elif self.args.operation == 'start':
+            self.start_crc()
+            self.oc_env
+            self.crc_credentials
 
     def verify_files(self):
         for x in [self.CRC_TAR, self.PULL_SECRET]:
@@ -109,6 +115,18 @@ class CRCBuilder:
             creds[username] = password
 
         return creds
+
+    def clean(self):
+        if self.crc_running:
+            stop_cmd = f'{self.CRC_BIN} cleanup'
+            logger.info(stop_cmd)
+            res = subprocess.run(stop_cmd, shell=True)
+            if res.returncode != 0:
+                raise Exception('stop failed')
+
+        delete_cmd = f'{self.CRC_BIN} delete'
+        logger.info(delete_cmd)
+        res = subprocess.run(delete_cmd, shell=True)
 
     def start_crc(self):
         if not self.crc_running:
