@@ -92,3 +92,13 @@ migrations:
 rollups:
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml restart refresher
 	$(DOCKER_COMPOSE_BIN) -f genstack.yml restart rollups_processor
+
+########################################
+# CRC + CLOWDER
+########################################
+
+crc_clean:
+	$(PYTHON_BIN) crc_tool.py clean
+
+crc_start:
+	$(PYTHON_BIN) crc_tool.py start
